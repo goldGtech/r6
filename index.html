@@ -1,202 +1,552 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>R6 Operator Random Picker</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>R6 Spin</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --panel-2: #334155;
+      --text: #f8fafc;
+      --muted: #cbd5e1;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #facc15;
+      --blue: #38bdf8;
+      --shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+      --radius: 18px;
+    }
 
-<style>
-body{
-font-family: Arial;
-background:#0f172a;
-color:white;
-text-align:center;
-padding:20px;
-}
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
 
-.container{
-display:flex;
-justify-content:center;
-gap:40px;
-flex-wrap:wrap;
-}
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(180deg, #0f172a 0%, #111827 100%);
+      color: var(--text);
+      text-align: center;
+      padding: 14px;
+    }
 
-.column{
-background:#1e293b;
-padding:20px;
-border-radius:10px;
-width:300px;
-}
+    .app {
+      max-width: 520px;
+      margin: 0 auto;
+    }
 
-button{
-padding:10px 15px;
-margin:5px;
-border:none;
-border-radius:6px;
-cursor:pointer;
-font-weight:bold;
-}
+    h1 {
+      font-size: 1.8rem;
+      margin: 10px 0 14px;
+      line-height: 1.15;
+    }
 
-.pick{
-background:#22c55e;
-color:black;
-}
+    .result-card {
+      background: var(--panel);
+      border-radius: 22px;
+      padding: 16px 14px;
+      box-shadow: var(--shadow);
+      margin-bottom: 14px;
+    }
 
-.remove{
-background:#ef4444;
-color:white;
-}
+    .result-label {
+      font-size: 0.92rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
 
-input{
-padding:8px;
-border-radius:5px;
-border:none;
-margin-top:10px;
-}
+    .result {
+      min-height: 52px;
+      font-size: 1.95rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--yellow);
+      word-break: break-word;
+      padding: 0 6px;
+    }
 
-.name{
-display:flex;
-justify-content:space-between;
-align-items:center;
-margin:3px 0;
-}
+    .wheel-wrap {
+      position: relative;
+      width: min(88vw, 360px);
+      height: min(88vw, 360px);
+      margin: 10px auto 16px;
+    }
 
-.result{
-font-size:28px;
-margin:20px;
-font-weight:bold;
-}
-</style>
+    .pointer {
+      position: absolute;
+      top: -2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 0;
+      height: 0;
+      border-left: 18px solid transparent;
+      border-right: 18px solid transparent;
+      border-top: 32px solid var(--yellow);
+      z-index: 4;
+      filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35));
+    }
+
+    .wheel {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 8px solid #e2e8f0;
+      box-shadow: var(--shadow);
+      background: #0b1220;
+      transition: transform 0.08s linear;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .wheel-center {
+      position: absolute;
+      inset: 50%;
+      width: 70px;
+      height: 70px;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background: #020617;
+      border: 5px solid #e2e8f0;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: white;
+      pointer-events: none;
+    }
+
+    .controls,
+    .spin-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    button,
+    select,
+    input {
+      font: inherit;
+      border: none;
+      border-radius: 16px;
+    }
+
+    button {
+      min-height: 58px;
+      font-size: 1.02rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+    }
+
+    .big {
+      min-height: 64px;
+      font-size: 1.08rem;
+    }
+
+    .btn-attack {
+      background: var(--blue);
+      color: #082f49;
+    }
+
+    .btn-defend {
+      background: var(--green);
+      color: #052e16;
+    }
+
+    .btn-spin {
+      background: white;
+      color: #0f172a;
+    }
+
+    .btn-stop {
+      background: var(--red);
+      color: white;
+    }
+
+    .panel {
+      background: var(--panel);
+      border-radius: var(--radius);
+      padding: 14px;
+      box-shadow: var(--shadow);
+      text-align: left;
+      margin-bottom: 14px;
+    }
+
+    .panel h2,
+    .panel h3 {
+      margin: 0 0 12px;
+      text-align: center;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .row > * {
+      flex: 1;
+    }
+
+    select,
+    input {
+      width: 100%;
+      min-height: 52px;
+      background: var(--panel-2);
+      color: white;
+      padding: 0 14px;
+      outline: none;
+    }
+
+    .manage-toggle {
+      width: 100%;
+      background: #475569;
+      color: white;
+      min-height: 54px;
+      margin-bottom: 12px;
+    }
+
+    .manage-box {
+      display: none;
+    }
+
+    .manage-box.open {
+      display: block;
+    }
+
+    .list-box {
+      background: #0f172a;
+      border-radius: 16px;
+      padding: 10px;
+      max-height: 290px;
+      overflow: auto;
+    }
+
+    .name-row {
+      display: grid;
+      grid-template-columns: 28px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 6px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      font-size: 0.98rem;
+    }
+
+    .name-row:last-child {
+      border-bottom: none;
+    }
+
+    .name-text {
+      overflow-wrap: anywhere;
+    }
+
+    .mini-remove {
+      background: var(--red);
+      color: white;
+      min-height: 40px;
+      min-width: 52px;
+      padding: 0 12px;
+      border-radius: 12px;
+      box-shadow: none;
+      font-size: 0.92rem;
+    }
+
+    .hint {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-top: 4px;
+      line-height: 1.35;
+    }
+
+    @media (min-width: 700px) {
+      .app {
+        max-width: 900px;
+      }
+
+      .bottom-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+    }
+  </style>
 </head>
-
 <body>
+  <div class="app">
+    <h1>Rainbow Six Spin Picker</h1>
 
-<h1>Rainbow Six Operator Random Picker</h1>
+    <div class="result-card">
+      <div class="result-label">Selected Operator</div>
+      <div class="result" id="result">Choose side, then spin</div>
+    </div>
 
-<div class="result" id="result">Press a button to pick</div>
+    <div class="wheel-wrap">
+      <div class="pointer"></div>
+      <canvas id="wheel" class="wheel" width="600" height="600"></canvas>
+      <div class="wheel-center">R6</div>
+    </div>
 
-<button class="pick" onclick="pickRandom('defenders')">Pick Defender</button>
-<button class="pick" onclick="pickRandom('attackers')">Pick Attacker</button>
+    <div class="controls">
+      <button class="big btn-defend" onclick="setMode('defenders')">Defenders</button>
+      <button class="big btn-attack" onclick="setMode('attackers')">Attackers</button>
+    </div>
 
-<div class="container">
+    <div class="spin-controls">
+      <button class="big btn-spin" onclick="startSpin()">SPIN</button>
+      <button class="big btn-stop" onclick="stopSpin()">STOP</button>
+    </div>
 
-<div class="column">
-<h2>Defenders</h2>
-<div id="defenders"></div>
-<input id="newDefender" placeholder="Add defender">
-<button onclick="addName('defenders','newDefender')">Add</button>
-</div>
+    <div class="panel">
+      <button class="manage-toggle" onclick="toggleManage()">Show / Hide Operator Settings</button>
+      <div class="manage-box" id="manageBox">
+        <div class="row">
+          <select id="manageType" onchange="renderManageList()">
+            <option value="defenders">Manage Defenders</option>
+            <option value="attackers">Manage Attackers</option>
+          </select>
+        </div>
 
-<div class="column">
-<h2>Attackers</h2>
-<div id="attackers"></div>
-<input id="newAttacker" placeholder="Add attacker">
-<button onclick="addName('attackers','newAttacker')">Add</button>
-</div>
+        <div class="row">
+          <input id="newOperator" placeholder="Add new operator" />
+          <button class="btn-spin" onclick="addOperator()">Add</button>
+        </div>
 
-</div>
+        <div class="hint">Use the dropdown above to switch between attackers and defenders. Uncheck operators to disable them.</div>
 
-<script>
+        <div class="list-box" id="manageList"></div>
+      </div>
+    </div>
+  </div>
 
-let defenders = [
-"Alibi","Aruni","Azami","Bandit","Castle","Caveira","Clash","Doc","Echo","Ela","Fenrir","Frost",
-"Goyo","Jäger","Kaid","Kapkan","Lesion","Maestro","Melusi","Mira","Mozzie","Mute","Oryx","Pulse",
-"Rook","Smoke","Solis","Tachanka","Thorn","Thunderbird","Tubarão","Valkyrie","Vigil","Wamai",
-"Warden","Skopós","Denari","Sentry"
-]
+  <script>
+    let defenders = [
+      'Alibi','Aruni','Azami','Bandit','Castle','Caveira','Clash','Doc','Echo','Ela','Fenrir','Frost',
+      'Goyo','Jäger','Kaid','Kapkan','Lesion','Maestro','Melusi','Mira','Mozzie','Mute','Oryx','Pulse',
+      'Rook','Smoke','Solis','Tachanka','Thorn','Thunderbird','Tubarão','Valkyrie','Vigil','Wamai',
+      'Warden','Skopós','Denari','Sentry'
+    ];
 
-let attackers = [
-"Ace","Amaru","Ash","Blackbeard","Blitz","Brava","Buck","Capitão","Deimos","Dokkaebi","Finka",
-"Flores","Fuze","Glaz","Gridlock","Grim","Hibana","Iana","IQ","Jackal","Kali","Lion","Maverick",
-"Montagne","Nøkk","Nomad","Osa","Ram","Sens","Sledge","Striker","Thatcher","Thermite","Twitch",
-"Ying","Zero","Zofia","Rauora","Solid Snake"
-]
+    let attackers = [
+      'Ace','Amaru','Ash','Blackbeard','Blitz','Brava','Buck','Capitão','Deimos','Dokkaebi','Finka',
+      'Flores','Fuze','Glaz','Gridlock','Grim','Hibana','Iana','IQ','Jackal','Kali','Lion','Maverick',
+      'Montagne','Nøkk','Nomad','Osa','Ram','Sens','Sledge','Striker','Thatcher','Thermite','Twitch',
+      'Ying','Zero','Zofia','Rauora','Solid Snake'
+    ];
 
-let disabled = new Set()
+    const disabled = new Set();
+    let currentType = 'defenders';
+    let spinning = false;
+    let currentRotation = 0;
+    let spinSpeed = 0;
+    let animationFrame = null;
 
-function render(){
+    const canvas = document.getElementById('wheel');
+    const ctx = canvas.getContext('2d');
+    const resultEl = document.getElementById('result');
 
-["defenders","attackers"].forEach(type=>{
+    function getList(type) {
+      return type === 'defenders' ? defenders : attackers;
+    }
 
-let list = type==="defenders"?defenders:attackers
-let container = document.getElementById(type)
+    function getActiveList(type = currentType) {
+      return getList(type).filter(name => !disabled.has(name));
+    }
 
-container.innerHTML=""
+    function setMode(type) {
+      currentType = type;
+      drawWheel();
+      resultEl.textContent = type === 'defenders' ? 'Defender wheel ready' : 'Attacker wheel ready';
+    }
 
-list.forEach(name=>{
+    function toggleManage() {
+      document.getElementById('manageBox').classList.toggle('open');
+    }
 
-let div=document.createElement("div")
-div.className="name"
+    function renderManageList() {
+      const type = document.getElementById('manageType').value;
+      const list = getList(type);
+      const wrap = document.getElementById('manageList');
 
-let checkbox=document.createElement("input")
-checkbox.type="checkbox"
-checkbox.checked=!disabled.has(name)
+      wrap.innerHTML = '';
 
-checkbox.onchange=()=>{
-if(checkbox.checked) disabled.delete(name)
-else disabled.add(name)
-}
+      list.forEach(name => {
+        const row = document.createElement('div');
+        row.className = 'name-row';
 
-let label=document.createElement("span")
-label.textContent=name
+        const check = document.createElement('input');
+        check.type = 'checkbox';
+        check.checked = !disabled.has(name);
+        check.onchange = () => {
+          if (check.checked) disabled.delete(name);
+          else disabled.add(name);
+          drawWheel();
+        };
 
-let remove=document.createElement("button")
-remove.textContent="X"
-remove.className="remove"
+        const text = document.createElement('div');
+        text.className = 'name-text';
+        text.textContent = name;
 
-remove.onclick=()=>{
-let arr=type==="defenders"?defenders:attackers
-arr.splice(arr.indexOf(name),1)
-disabled.delete(name)
-render()
-}
+        const remove = document.createElement('button');
+        remove.className = 'mini-remove';
+        remove.textContent = 'Remove';
+        remove.onclick = () => removeOperator(type, name);
 
-div.appendChild(checkbox)
-div.appendChild(label)
-div.appendChild(remove)
+        row.appendChild(check);
+        row.appendChild(text);
+        row.appendChild(remove);
+        wrap.appendChild(row);
+      });
+    }
 
-container.appendChild(div)
+    function addOperator() {
+      const type = document.getElementById('manageType').value;
+      const input = document.getElementById('newOperator');
+      const name = input.value.trim();
+      if (!name) return;
 
-})
+      const list = getList(type);
+      if (!list.includes(name)) list.push(name);
 
-})
+      input.value = '';
+      renderManageList();
+      drawWheel();
+    }
 
-}
+    function removeOperator(type, name) {
+      const list = getList(type);
+      const index = list.indexOf(name);
+      if (index !== -1) list.splice(index, 1);
+      disabled.delete(name);
+      renderManageList();
+      drawWheel();
+    }
 
-function pickRandom(type){
+    function startSpin() {
+      const active = getActiveList();
+      if (active.length === 0) {
+        resultEl.textContent = 'No operators enabled!';
+        return;
+      }
 
-let list = type==="defenders"?defenders:attackers
+      if (spinning) return;
 
-let active=list.filter(x=>!disabled.has(x))
+      spinning = true;
+      spinSpeed = 18 + Math.random() * 10;
+      animateSpin();
+      resultEl.textContent = 'Spinning...';
+    }
 
-if(active.length===0){
-document.getElementById("result").textContent="No operators enabled!"
-return
-}
+    function stopSpin() {
+      if (!spinning) return;
+      spinning = false;
+      finalizeChoice();
+    }
 
-let choice=active[Math.floor(Math.random()*active.length)]
+    function animateSpin() {
+      currentRotation = (currentRotation + spinSpeed) % 360;
+      drawWheel();
 
-document.getElementById("result").textContent=choice
+      if (spinning) {
+        animationFrame = requestAnimationFrame(animateSpin);
+      }
+    }
 
-}
+    function finalizeChoice() {
+      if (animationFrame) cancelAnimationFrame(animationFrame);
 
-function addName(type,inputId){
+      const active = getActiveList();
+      if (active.length === 0) {
+        resultEl.textContent = 'No operators enabled!';
+        drawWheel();
+        return;
+      }
 
-let input=document.getElementById(inputId)
+      const degreesPerSlice = 360 / active.length;
+      const pointerAngle = 270; // top
+      const adjusted = (pointerAngle - currentRotation % 360 + 360) % 360;
+      const index = Math.floor(adjusted / degreesPerSlice) % active.length;
+      const picked = active[index];
 
-if(!input.value) return
+      resultEl.textContent = picked;
+      drawWheel(picked);
+    }
 
-if(type==="defenders") defenders.push(input.value)
-else attackers.push(input.value)
+    function getSliceColor(index) {
+      const colors = [
+        '#38bdf8', '#22c55e', '#f97316', '#a78bfa', '#f43f5e', '#eab308',
+        '#14b8a6', '#60a5fa', '#84cc16', '#fb7185', '#c084fc', '#f59e0b'
+      ];
+      return colors[index % colors.length];
+    }
 
-input.value=""
+    function drawWheel(highlightedName = null) {
+      const active = getActiveList();
+      const size = canvas.width;
+      const cx = size / 2;
+      const cy = size / 2;
+      const r = size / 2;
 
-render()
+      ctx.clearRect(0, 0, size, size);
 
-}
+      if (active.length === 0) {
+        ctx.fillStyle = '#1e293b';
+        ctx.beginPath();
+        ctx.arc(cx, cy, r - 3, 0, Math.PI * 2);
+        ctx.fill();
 
-render()
+        ctx.fillStyle = 'white';
+        ctx.font = 'bold 30px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('No enabled operators', cx, cy);
+        return;
+      }
 
-</script>
+      const angleSize = (Math.PI * 2) / active.length;
+      const rotationRad = currentRotation * Math.PI / 180;
 
+      for (let i = 0; i < active.length; i++) {
+        const start = -Math.PI / 2 + rotationRad + i * angleSize;
+        const end = start + angleSize;
+        const name = active[i];
+
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, r - 4, start, end);
+        ctx.closePath();
+        ctx.fillStyle = highlightedName === name ? '#facc15' : getSliceColor(i);
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#0f172a';
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(start + angleSize / 2);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#ffffff';
+
+        const count = active.length;
+        const fontSize = count > 24 ? 16 : count > 18 ? 18 : count > 12 ? 21 : 24;
+        ctx.font = `bold ${fontSize}px Arial`;
+        ctx.fillText(name, r - 36, 0);
+        ctx.restore();
+      }
+    }
+
+    renderManageList();
+    setMode('defenders');
+  </script>
 </body>
 </html>
+
